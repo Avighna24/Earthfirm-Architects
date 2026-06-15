@@ -1,0 +1,89 @@
+{
+  "entities": {
+    "Project": {
+      "title": "Project",
+      "description": "An architectural project",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "location": { "type": "string" },
+        "area": { "type": "string" },
+        "year": { "type": "string" },
+        "duration": { "type": "string" },
+        "sustainabilityScore": { "type": "number" },
+        "materials": { "type": "array" },
+        "description": { "type": "string" },
+        "fullImage": { "type": "string" },
+        "gallery": { "type": "array" },
+        "blueprintSVGId": { "type": "string" },
+        "features": { "type": "array" }
+      },
+      "required": ["id", "title", "description"]
+    },
+    "Testimonial": {
+       "title": "Testimonial",
+       "description": "A client testimonial",
+       "type": "object",
+       "properties": {
+         "id": { "type": "string" },
+         "name": { "type": "string" },
+         "role": { "type": "string" },
+         "project": { "type": "string" },
+         "quote": { "type": "string" },
+         "rating": { "type": "number" },
+         "avatar": { "type": "string" }
+       },
+       "required": ["id", "name", "quote"]
+    },
+    "Client": {
+       "title": "Client",
+       "description": "A client organization",
+       "type": "object",
+       "properties": {
+         "id": { "type": "string" },
+         "name": { "type": "string" },
+         "logoUrl": { "type": "string" },
+         "fallbackAcronym": { "type": "string" },
+         "description": { "type": "string" },
+         "industry": { "type": "string" },
+         "prominentProject": { "type": "string" }
+       },
+       "required": ["id", "name"]
+    },
+    "VideoTestimonial": {
+       "title": "VideoTestimonial",
+       "description": "A video testimonial",
+       "type": "object",
+       "properties": {
+         "id": { "type": "string" },
+         "name": { "type": "string" },
+         "role": { "type": "string" },
+         "project": { "type": "string" },
+         "quote": { "type": "string" },
+         "videoUrl": { "type": "string" },
+         "avatar": { "type": "string" }
+       },
+       "required": ["id", "name", "videoUrl"]
+    }
+  },
+  "firestore": {
+    "projects": {
+      "schema": "Project",
+      "description": "Architectural projects"
+    },
+    "testimonials": {
+      "schema": "Testimonial",
+      "description": "Client testimonials"
+    },
+    "clients": {
+      "schema": "Client",
+      "description": "Client organizations"
+    },
+    "videoTestimonials": {
+      "schema": "VideoTestimonial",
+      "description": "Video testimonials"
+    }
+  }
+}

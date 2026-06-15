@@ -1,0 +1,97 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,100..900;1,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+
+@theme {
+  --font-sans: "Jost", "Inter", system-ui, sans-serif;
+  --font-display: "Jost", "Syne", system-ui, sans-serif;
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-mono: "JetBrains Mono", monospace;
+  --color-amber: #f59e0b;
+  --animate-shimmer: shimmer 2.2s infinite;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    background-color: black;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: black;
+    color: #E5E3DF;
+    letter-spacing: 0.02em;
+  }
+
+  img {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    letter-spacing: 0.05em;
+    color: #E5E3DF;
+    text-transform: uppercase;
+  }
+
+  /* Custom input slider styles for geometric theme */
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    background: #1E1E1C;
+    height: 3px;
+    border-radius: 0;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    background: #E5E3DF;
+    border: none;
+    cursor: pointer;
+    border-radius: 0;
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    background: #E5E3DF;
+    border: none;
+    cursor: pointer;
+    border-radius: 0;
+  }
+}
+
+@keyframes subtle-zoom {
+  0% { transform: scale(1.02); }
+  100% { transform: scale(1.07); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-up {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-scale-up {
+  animation: scale-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
