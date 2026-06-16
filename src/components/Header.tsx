@@ -29,7 +29,7 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
           id="header-logo"
         >
           <img 
-            src="https://earthfirmarchitects.com/static/images/logo_website.png" 
+            src="/logo_website.png" 
             alt="Earthfirm Architects" 
             className="h-14 w-auto object-contain transition-all duration-500 group-hover:scale-105 brightness-0 invert"
           />

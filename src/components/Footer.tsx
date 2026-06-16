@@ -64,7 +64,7 @@ export default function Footer({ theme = "dark", setActiveTab }: FooterProps) {
                 className="cursor-pointer group inline-block"
               >
                 <img 
-                  src="https://earthfirmarchitects.com/static/images/logo_website.png" 
+                  src="/logo_website.png" 
                   alt="Earth Firm Architects Logo" 
                   className={`h-12 w-auto object-contain transition-all duration-500 group-hover:scale-105 ${
                     theme === "dark" ? "brightness-0 invert" : "grayscale contrast-125"
