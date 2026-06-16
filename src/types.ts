@@ -34,6 +34,7 @@ export interface Project {
   phase?: string;
   tagline?: string;
   isHighlight?: boolean;
+  order?: number;
 }
 
 export interface VideoTestimonial {

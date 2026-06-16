@@ -52,7 +52,7 @@ export default function ConsultationPage() {
       }
 
       if (!backendSuccess) {
-        const { saveLocalConsultation } = await import("../utils/localStorageDb");
+        const { saveLocalConsultation } = await import("../utils/firestoreDb");
         await saveLocalConsultation(formData);
       }
 

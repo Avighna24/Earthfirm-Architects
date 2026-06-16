@@ -175,7 +175,7 @@ export default function WorkWithUs() {
       }
 
       if (!backendSuccess) {
-        const { saveLocalApplication } = await import("../utils/localStorageDb");
+        const { saveLocalApplication } = await import("../utils/firestoreDb");
         await saveLocalApplication({
           fullName: formData.fullName,
           email: formData.email,

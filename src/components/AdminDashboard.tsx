@@ -276,14 +276,24 @@ export default function AdminDashboard() {
           gallery: optimizedGallery
         };
         
-        await updateLocal(reoptimizedProj);
-        await updateFirestore(reoptimizedProj);
+        // Use Promise.allSettled to ensure Firestore updates even if local fails
+        await Promise.allSettled([
+          updateLocal(reoptimizedProj),
+          updateFirestore(reoptimizedProj)
+        ]);
       }
       
       setBulkProgress("Successfully completed bulk optimization!");
       setActionSuccess(`All images across ${totalCount} selected projects have been re-optimized!`);
       setSelectedBulkProjectIds([]);
       await loadAdminProjects();
+
+      try {
+        const { logAdminActivity } = await import("../utils/firestoreDb");
+        await logAdminActivity(`Bulk re-optimized cover & gallery images across ${totalCount} selected projects`, "Admin");
+      } catch (logErr) {
+        console.warn("Could not log bulk optimization activity:", logErr);
+      }
       
       setTimeout(() => {
         setBulkProgress(null);
@@ -311,6 +321,7 @@ export default function AdminDashboard() {
 
   const moveProject = async (id: string, direction: number) => {
     const { updateAllLocalProjects } = await import("../utils/localStorageDb");
+    const { updateAllProjectsOrder } = await import("../utils/firestoreDb");
     const index = adminProjects.findIndex(p => p.id === id);
     if (index === -1) return;
     const newIndex = index + direction;
@@ -319,13 +330,21 @@ export default function AdminDashboard() {
     const newProjects = [...adminProjects];
     [newProjects[index], newProjects[newIndex]] = [newProjects[newIndex], newProjects[index]];
     
-    setAdminProjects(newProjects);
-    await updateAllLocalProjects(newProjects);
+    // Assign order property to match array index explicitly
+    newProjects.forEach((p, idx) => {
+      p.order = idx;
+    });
+
+    setAdminProjects([...newProjects]);
+    await Promise.all([
+      updateAllLocalProjects(newProjects),
+      updateAllProjectsOrder(newProjects)
+    ]).catch(err => console.error("Error saving project order", err));
   };
 
   const loadTestimonials = async () => {
     try {
-      const { fetchLocalTestimonials } = await import("../utils/localStorageDb");
+      const { fetchLocalTestimonials } = await import("../utils/firestoreDb");
       setTestimonials(await fetchLocalTestimonials());
     } catch (err) {
       console.error("Failed to load testimonials", err);
@@ -334,7 +353,7 @@ export default function AdminDashboard() {
 
   const loadClients = async () => {
     try {
-      const { fetchLocalClients } = await import("../utils/localStorageDb");
+      const { fetchLocalClients } = await import("../utils/firestoreDb");
       setClients(await fetchLocalClients());
     } catch (err) {
       console.error("Failed to load clients", err);
@@ -343,7 +362,7 @@ export default function AdminDashboard() {
 
   const loadVideoTestimonials = async () => {
     try {
-      const { fetchLocalVideoTestimonials } = await import("../utils/localStorageDb");
+      const { fetchLocalVideoTestimonials } = await import("../utils/firestoreDb");
       setVideoTestimonials(await fetchLocalVideoTestimonials());
     } catch (err) {
       console.error("Failed to load video testimonials", err);
@@ -352,7 +371,7 @@ export default function AdminDashboard() {
 
   const loadTeam = async () => {
     try {
-      const { fetchLocalTeam } = await import("../utils/localStorageDb");
+      const { fetchLocalTeam } = await import("../utils/firestoreDb");
       setTeam(await fetchLocalTeam());
     } catch (err) {
       console.error("Failed to load team members", err);
@@ -383,7 +402,7 @@ export default function AdminDashboard() {
             avatarBase64 = await fileToBase64(target.avatarFile.files[0]);
           }
 
-          const { saveLocalTestimonial } = await import("../utils/localStorageDb");
+          const { saveLocalTestimonial } = await import("../utils/firestoreDb");
           saveLocalTestimonial({ 
             name: target.name.value, 
             role: target.role.value, 
@@ -436,7 +455,7 @@ export default function AdminDashboard() {
             logoBase64 = await fileToBase64(target.logoFile.files[0]);
           }
 
-          const { saveLocalClient } = await import("../utils/localStorageDb");
+          const { saveLocalClient } = await import("../utils/firestoreDb");
           saveLocalClient({ 
             name: target.name.value, 
             logo: logoBase64, 
@@ -490,7 +509,7 @@ export default function AdminDashboard() {
             avatarBase64 = await fileToBase64(target.avatarFile.files[0]);
           }
 
-          const { saveLocalVideoTestimonial } = await import("../utils/localStorageDb");
+          const { saveLocalVideoTestimonial } = await import("../utils/firestoreDb");
           saveLocalVideoTestimonial({ 
             name: target.name.value, 
             role: target.role.value, 
@@ -555,7 +574,7 @@ export default function AdminDashboard() {
             avatarBase64 = await fileToBase64(target.avatarFile.files[0]);
           }
 
-          const { saveLocalTeamMember, updateLocalTeamMember } = await import("../utils/localStorageDb");
+          const { saveLocalTeamMember, updateLocalTeamMember } = await import("../utils/firestoreDb");
           
           if (isEditingTeamMember) {
             updateLocalTeamMember({
@@ -690,7 +709,10 @@ export default function AdminDashboard() {
       const { updateLocalProjectHighlights: updateLocal } = await import("../utils/localStorageDb");
       const { updateLocalProjectHighlights: updateFirestore } = await import("../utils/firestoreDb");
       
-      await updateFirestore(selectedHighlightIds);
+      await Promise.all([
+        updateFirestore(selectedHighlightIds),
+        updateLocal(selectedHighlightIds)
+      ]);
       const updated = await updateLocal(selectedHighlightIds);
       
       setAdminProjects(updated);
@@ -885,7 +907,8 @@ export default function AdminDashboard() {
         if (item.file) {
           try {
             const base64 = await fileToBase64(item.file);
-            processedGallery.push({ name: item.name, data: base64 });
+            const optimized = await compressBase64(base64, 900, 0.7);
+            processedGallery.push({ name: item.name, data: optimized });
           } catch (err) {
             console.error("Failed to compress file: " + item.name, err);
             processedGallery.push({ name: item.name, data: item.previewUrl });
@@ -913,7 +936,7 @@ export default function AdminDashboard() {
         } catch (_) {}
       }
 
-      const projectData: any = {
+      const baseProjectData: any = {
         title: newProjTitle,
         category: newProjCategories.join(","),
         location: newProjLocation,
@@ -934,12 +957,24 @@ export default function AdminDashboard() {
       };
 
       if (isEditingProject && editingProjectId) {
-        await updateLocal({ ...projectData, id: editingProjectId });
-        await updateFirestore({ ...projectData, id: editingProjectId });
+        const existing = adminProjects.find(p => p.id === editingProjectId);
+        const projectData = {
+          ...existing,
+          ...baseProjectData,
+          id: editingProjectId
+        };
+        await Promise.all([
+          updateLocal(projectData),
+          updateFirestore(projectData)
+        ]);
         setActionSuccess(`Portfolio entry "${projectData.title}" successfully updated.`);
       } else {
-        await saveLocal(projectData);
-        await saveFirestore(projectData);
+        const projectData = {
+          ...baseProjectData,
+          isHighlight: false
+        };
+        const firestoreResult = await saveFirestore(projectData);
+        await saveLocal(firestoreResult);
         setActionSuccess(`Portfolio entry "${projectData.title}" successfully added & synced.`);
       }
       
@@ -1048,74 +1083,41 @@ export default function AdminDashboard() {
     }
   }, []);
 
-  const fetchSubmissions = async (code: string) => {
-    setLoading(true);
-    setError("");
-    try {
-      let loaded = false;
-      try {
-        const response = await fetch("/api/admin/submissions", {
-          headers: {
-            "x-admin-passcode": code
-          }
-        });
-        if (response.ok) {
-          const contentType = response.headers.get("content-type");
-          if (contentType && contentType.includes("application/json")) {
-            const data = await response.json();
-            setApplications(data.applications || []);
-            setConsultations(data.consultations || []);
-            loaded = true;
-          }
-        }
-      } catch (err) {
-        console.warn("Express backend unreachable for submissions. Trying local database failover.", err);
-      }
+  useEffect(() => {
+    let unsubSubmissions: (() => void) | undefined;
+    let unsubActivities: (() => void) | undefined;
 
-      if (!loaded) {
-        const { fetchLocalSubmissions } = await import("../utils/localStorageDb");
-        const { applications, consultations } = await fetchLocalSubmissions();
+    const setupListeners = async () => {
+      setLoading(true);
+      const { subscribeToSubmissions, subscribeToActivities } = await import("../utils/firestoreDb");
+      
+      unsubSubmissions = subscribeToSubmissions(({ applications, consultations }) => {
         setApplications(applications || []);
         setConsultations(consultations || []);
-        console.log("Submissions successfully loaded from client-side Firestore database.");
-      }
-      fetchActivities(code);
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch data.");
-    } finally {
-      setLoading(false);
+        setLoading(false);
+      });
+
+      unsubActivities = subscribeToActivities((localActivities) => {
+        setActivities(localActivities || []);
+      });
+    };
+
+    if (isAuthenticated) {
+      setupListeners();
     }
+
+    return () => {
+      if (unsubSubmissions) unsubSubmissions();
+      if (unsubActivities) unsubActivities();
+    };
+  }, [isAuthenticated]);
+
+  const fetchSubmissions = async (code: string) => {
+    // Left empty specifically to avoid breaking manual calls since subscriptions handle real-time.
   };
 
   const fetchActivities = async (code: string) => {
-    try {
-      let loaded = false;
-      try {
-        const response = await fetch("/api/admin/activities", {
-          headers: {
-            "x-admin-passcode": code
-          }
-        });
-        if (response.ok) {
-          const contentType = response.headers.get("content-type");
-          if (contentType && contentType.includes("application/json")) {
-            const data = await response.json();
-            setActivities(data || []);
-            loaded = true;
-          }
-        }
-      } catch (err) {
-        console.warn("Express backend unreachable for activities. Trying local database failover.", err);
-      }
-
-      if (!loaded) {
-        const { fetchLocalActivities } = await import("../utils/localStorageDb");
-        const localActivities = await fetchLocalActivities();
-        setActivities(localActivities || []);
-      }
-    } catch (err) {
-      console.error("Failed to load activities:", err);
-    }
+    // Left empty specifically to avoid breaking manual calls since subscriptions handle real-time.
   };
 
   const [deleteTarget, setDeleteTarget] = useState<{ 
@@ -1139,62 +1141,31 @@ export default function AdminDashboard() {
     const code = savedPasscode || passcode;
     try {
       if (type === "application" || type === "consultation") {
-        let backendDeleted = false;
-        try {
-          const response = await fetch("/api/admin/delete-submission", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-admin-passcode": code
-            },
-            body: JSON.stringify({ type, id })
-          });
-
-          if (response.ok) {
-            const contentType = response.headers.get("content-type");
-            if (contentType && contentType.includes("application/json")) {
-              await response.json();
-              backendDeleted = true;
-            }
-          }
-        } catch (err) {
-          console.warn("Backend server unreachable. Deleting entry locally instead.", err);
-        }
-
-        if (!backendDeleted) {
-          const { deleteLocalSubmission } = await import("../utils/localStorageDb");
-          deleteLocalSubmission(type, id);
-        }
+        const { deleteLocalSubmission } = await import("../utils/firestoreDb");
+        await deleteLocalSubmission(id, type as "application" | "consultation");
 
         setActionSuccess("Submission permanently deleted.");
         setTimeout(() => setActionSuccess(""), 3000);
-        
-        // Update local state
-        if (type === "application") {
-          setApplications(applications.filter(a => a.id !== id));
-        } else {
-          setConsultations(consultations.filter(c => c.id !== id));
-        }
       } else if (type === "testimonial") {
-        const { deleteLocalTestimonial } = await import("../utils/localStorageDb");
+        const { deleteLocalTestimonial } = await import("../utils/firestoreDb");
         await deleteLocalTestimonial(id);
         setActionSuccess(`Testimonial from "${name || 'client'}" permanently deleted.`);
         setTimeout(() => setActionSuccess(""), 3000);
         loadTestimonials();
       } else if (type === "partner") {
-        const { deleteLocalClient } = await import("../utils/localStorageDb");
+        const { deleteLocalClient } = await import("../utils/firestoreDb");
         await deleteLocalClient(id);
         setActionSuccess(`Partner "${name || 'company'}" permanently deleted.`);
         setTimeout(() => setActionSuccess(""), 3000);
         loadClients();
       } else if (type === "videoTestimonial") {
-        const { deleteLocalVideoTestimonial } = await import("../utils/localStorageDb");
+        const { deleteLocalVideoTestimonial } = await import("../utils/firestoreDb");
         await deleteLocalVideoTestimonial(id);
         setActionSuccess(`Video testimonial from "${name || 'client'}" permanently deleted.`);
         setTimeout(() => setActionSuccess(""), 3000);
         loadVideoTestimonials();
       } else if (type === "teamMember") {
-        const { deleteLocalTeamMember } = await import("../utils/localStorageDb");
+        const { deleteLocalTeamMember } = await import("../utils/firestoreDb");
         await deleteLocalTeamMember(id);
         setActionSuccess(`Team member "${name || 'staff'}" permanently deleted.`);
         setTimeout(() => setActionSuccess(""), 3000);
@@ -1219,43 +1190,11 @@ export default function AdminDashboard() {
   const handleUpdateStatus = async (type: "application" | "consultation", id: string, newStatus: string) => {
     const code = savedPasscode || passcode;
     try {
-      let backendUpdated = false;
-      try {
-        const response = await fetch("/api/admin/update-status", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-admin-passcode": code
-          },
-          body: JSON.stringify({ type, id, status: newStatus })
-        });
-
-        if (response.ok) {
-          const contentType = response.headers.get("content-type");
-          if (contentType && contentType.includes("application/json")) {
-            await response.json();
-            backendUpdated = true;
-          }
-        }
-      } catch (err) {
-        console.warn("Backend server unreachable. Updating entry status locally instead.", err);
-      }
-
-      if (!backendUpdated) {
-        const { updateLocalSubmissionStatus } = await import("../utils/localStorageDb");
-        updateLocalSubmissionStatus(type, id, newStatus);
-      }
+      const { updateLocalSubmissionStatus } = await import("../utils/firestoreDb");
+      await updateLocalSubmissionStatus(id, type, newStatus);
 
       setActionSuccess(`Status successfully changed to ${newStatus}.`);
       setTimeout(() => setActionSuccess(""), 2000);
-
-      // Update local state
-      if (type === "application") {
-        setApplications(applications.map(a => a.id === id ? { ...a, status: newStatus } : a));
-      } else {
-        setConsultations(consultations.map(c => c.id === id ? { ...c, status: newStatus } : c));
-      }
-      fetchActivities(code);
     } catch (err: any) {
       alert(err.message || "An unexpected error occurred while updating the status.");
     }
@@ -1292,45 +1231,18 @@ export default function AdminDashboard() {
     setBulkStatusLoading(true);
     const code = savedPasscode || passcode;
     try {
-      let backendUpdated = false;
-      try {
-        const response = await fetch("/api/admin/bulk-update-status", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-admin-passcode": code
-          },
-          body: JSON.stringify({ type, ids, status: newStatus })
-        });
-
-        if (response.ok) {
-          const contentType = response.headers.get("content-type");
-          if (contentType && contentType.includes("application/json")) {
-            await response.json();
-            backendUpdated = true;
-          }
-        }
-      } catch (err) {
-        console.warn("Backend server unreachable. Performing bulk status update locally instead.", err);
-      }
-
-      if (!backendUpdated) {
-        const { bulkUpdateLocalStatus } = await import("../utils/localStorageDb");
-        bulkUpdateLocalStatus(type, ids, newStatus);
-      }
+      const { bulkUpdateLocalStatus } = await import("../utils/firestoreDb");
+      await bulkUpdateLocalStatus(type, ids, newStatus);
 
       setActionSuccess(`Successfully updated the status of ${ids.length} submissions to ${newStatus}.`);
       setTimeout(() => setActionSuccess(""), 3000);
 
-      // Update local state
+      // Deselect UI checkboxes
       if (type === "application") {
-        setApplications(applications.map(a => ids.includes(a.id) ? { ...a, status: newStatus } : a));
         setSelectedApplicationIds([]);
       } else {
-        setConsultations(consultations.map(c => ids.includes(c.id) ? { ...c, status: newStatus } : c));
         setSelectedConsultationIds([]);
       }
-      fetchActivities(code);
     } catch (err: any) {
       alert(err.message || "An unexpected error occurred while running the bulk status clear.");
     } finally {
@@ -1349,45 +1261,18 @@ export default function AdminDashboard() {
 
     const code = savedPasscode || passcode;
     try {
-      let backendDeleted = false;
-      try {
-        const response = await fetch("/api/admin/bulk-delete", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-admin-passcode": code
-          },
-          body: JSON.stringify({ type, ids })
-        });
-
-        if (response.ok) {
-          const contentType = response.headers.get("content-type");
-          if (contentType && contentType.includes("application/json")) {
-            await response.json();
-            backendDeleted = true;
-          }
-        }
-      } catch (err) {
-        console.warn("Backend server unreachable. Performing bulk delete locally instead.", err);
-      }
-
-      if (!backendDeleted) {
-        const { bulkDeleteLocalSubmissions } = await import("../utils/localStorageDb");
-        bulkDeleteLocalSubmissions(type, ids);
-      }
+      const { bulkDeleteLocalSubmissions } = await import("../utils/firestoreDb");
+      await bulkDeleteLocalSubmissions(type, ids);
 
       setActionSuccess(`Successfully deleted ${ids.length} entries permanently.`);
       setTimeout(() => setActionSuccess(""), 3000);
 
-      // Update local state
+      // Deselect UI checkboxes
       if (type === "application") {
-        setApplications(applications.filter(a => !ids.includes(a.id)));
         setSelectedApplicationIds([]);
       } else {
-        setConsultations(consultations.filter(c => !ids.includes(c.id)));
         setSelectedConsultationIds([]);
       }
-      fetchActivities(code);
     } catch (err: any) {
       alert(err.message || "An unexpected error transpired during bulk removal.");
     } finally {
@@ -1529,19 +1414,47 @@ export default function AdminDashboard() {
           </div>
         ) : (
           <div className="space-y-8 animate-fade-in">
-            {/* Notification Bar */}
-            <AnimatePresence>
-              {actionSuccess && (
-                <motion.div 
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="p-4 bg-emerald-950/30 border border-emerald-900/50 text-emerald-400 font-mono text-[10px] uppercase tracking-widest"
-                >
-                  {actionSuccess}
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* Notification Toasts */}
+            <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3 items-end pointer-events-none">
+              <AnimatePresence>
+                {actionSuccess && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                    className="p-4 w-auto max-w-sm shadow-2xl bg-emerald-950/90 backdrop-blur-md border border-emerald-900/50 text-emerald-400 font-mono text-[10px] uppercase tracking-widest rounded flex items-center shadow-emerald-900/20 pointer-events-auto"
+                  >
+                    <svg className="w-4 h-4 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="flex-1">{actionSuccess}</span>
+                    <button onClick={() => setActionSuccess("")} className="ml-3 hover:text-white transition-colors">
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </motion.div>
+                )}
+                {error && isAuthenticated && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                    className="p-4 w-auto max-w-sm shadow-2xl bg-red-950/90 backdrop-blur-md border border-red-900/50 text-red-400 font-mono text-[10px] uppercase tracking-widest rounded flex items-center shadow-red-900/20 pointer-events-auto"
+                  >
+                    <svg className="w-4 h-4 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <span className="flex-1">{error}</span>
+                    <button onClick={() => setError("")} className="ml-3 hover:text-white transition-colors">
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
             {/* Studio Analytics and Dashboard Insights Section */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-8 border-b border-white/5 pb-8" id="admin-analytics-grid">
@@ -1626,8 +1539,8 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Graphic Chart Wrapper */}
-                <div className="min-h-[240px] w-full mt-4" id="admin-recharts-bar-chart">
-                  <ResponsiveContainer width="100%" height="100%">
+                <div className="h-[240px] min-h-[240px] w-full mt-4" id="admin-recharts-bar-chart">
+                  <ResponsiveContainer width="100%" height={240}>
                     <BarChart
                        data={getMonthlyData()}
                        margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
@@ -1826,12 +1739,22 @@ export default function AdminDashboard() {
               </div>
 
               <button
-                onClick={() => fetchSubmissions(savedPasscode || passcode)}
+                onClick={() => {
+                  const code = savedPasscode || passcode;
+                  fetchSubmissions(code);
+                  loadAdminProjects();
+                  loadTestimonials();
+                  loadClients();
+                  loadVideoTestimonials();
+                  loadTeam();
+                  setActionSuccess("All data refreshed successfully from Firebase.");
+                  setTimeout(() => setActionSuccess(""), 4000);
+                }}
                 disabled={loading}
                 className="flex items-center justify-center gap-2 hover:text-amber-500 transition-colors py-2 text-[10px] uppercase font-mono tracking-widest text-[#E5E3DF] w-full sm:w-auto"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-amber-500" : ""}`} />
-                {loading ? "Refreshing..." : "Refresh Submissions"}
+                {loading ? "Refreshing..." : "Sync All Data"}
               </button>
             </div>
 
@@ -2042,19 +1965,19 @@ export default function AdminDashboard() {
                                   <div className="flex gap-2 min-w-0">
                                     <FileText className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
                                     <div className="min-w-0">
-                                      <p className="text-white font-medium truncate py-0.5" title={app.resumeName || "resume.pdf"}>
-                                        {app.resumeName || "Candidate_CV.pdf"}
+                                      <p className="text-white font-medium truncate py-0.5" title={app.resumeFile?.name || app.resumeName || "resume.pdf"}>
+                                        {app.resumeFile?.name || app.resumeName || "Candidate_CV.pdf"}
                                       </p>
                                       <span className="text-zinc-600 font-mono text-[8px] uppercase tracking-wider block mt-0.5">
-                                        Type: {app.resumeName?.split('.').pop()?.toUpperCase() || "PDF"}
+                                        Type: {(app.resumeFile?.name || app.resumeName || "PDF")?.split('.').pop()?.toUpperCase()}
                                       </span>
                                     </div>
                                   </div>
                                 </div>
                                 <div className="mt-3">
                                   <a 
-                                    href={app.resumeUrl}
-                                    download={app.resumeName || `${app.fullName.replace(/\s+/g, '_')}_Resume.pdf`}
+                                    href={app.resumeFile?.data || app.resumeUrl}
+                                    download={app.resumeFile?.name || app.resumeName || `${app.fullName.replace(/\s+/g, '_')}_Resume.pdf`}
                                     className="w-full flex items-center justify-center gap-2 bg-zinc-900 hover:bg-white text-zinc-400 hover:text-black py-2 rounded-sm border border-white/5 font-bold text-[9px] uppercase tracking-widest transition-all duration-300"
                                   >
                                     <Download className="w-3 h-3" />
@@ -2069,19 +1992,19 @@ export default function AdminDashboard() {
                                   <div className="flex gap-2 min-w-0">
                                     <FileCode className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
                                     <div className="min-w-0">
-                                      <p className="text-white font-medium truncate py-0.5" title={app.portfolioName || "portfolio.pdf"}>
-                                        {app.portfolioName || "Portfolio_Dossier.pdf"}
+                                      <p className="text-white font-medium truncate py-0.5" title={app.portfolioFile?.name || app.portfolioName || "portfolio.pdf"}>
+                                        {app.portfolioFile?.name || app.portfolioName || "Portfolio_Dossier.pdf"}
                                       </p>
                                       <span className="text-zinc-600 font-mono text-[8px] uppercase tracking-wider block mt-0.5">
-                                        Type: {app.portfolioName?.split('.').pop()?.toUpperCase() || "PDF"}
+                                        Type: {(app.portfolioFile?.name || app.portfolioName || "PDF")?.split('.').pop()?.toUpperCase()}
                                       </span>
                                     </div>
                                   </div>
                                 </div>
                                 <div className="mt-3">
                                   <a 
-                                    href={app.portfolioUrl}
-                                    download={app.portfolioName || `${app.fullName.replace(/\s+/g, '_')}_Portfolio.pdf`}
+                                    href={app.portfolioFile?.data || app.portfolioUrl}
+                                    download={app.portfolioFile?.name || app.portfolioName || `${app.fullName.replace(/\s+/g, '_')}_Portfolio.pdf`}
                                     className="w-full flex items-center justify-center gap-2 bg-zinc-900 hover:bg-white text-zinc-400 hover:text-black py-2 rounded-sm border border-white/5 font-bold text-[9px] uppercase tracking-widest transition-all duration-300"
                                   >
                                     <Download className="w-3 h-3" />

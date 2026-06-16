@@ -243,11 +243,8 @@ const ProjectRowCard: React.FC<{
         scale: scaleSpring,
         transformStyle: "preserve-3d"
       }}
-      className={`group relative ${isEditMode ? "cursor-default" : "cursor-pointer"} bg-transparent border-b border-white/10 pb-8 overflow-hidden flex flex-col lg:flex-row gap-12 rounded-none transition-all duration-500 hover:bg-white/[0.02] z-10 hover:z-20 will-change-transform`}
-      whileHover={isEditMode ? {} : { 
-        boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 20px rgba(255, 255, 255, 0.05)",
-        borderColor: "rgba(255, 255, 255, 0.2)"
-      }}
+      className={`group relative ${isEditMode ? "cursor-default" : "cursor-pointer"} bg-transparent border-b border-white/10 hover:border-white/20 pb-8 overflow-hidden flex flex-col lg:flex-row gap-12 rounded-none transition-all duration-500 hover:bg-white/[0.02] z-10 hover:z-20 will-change-transform ${!isEditMode ? "hover:shadow-2xl hover:shadow-black/70" : ""}`}
+      whileHover={isEditMode ? {} : {}}
       variants={variants}
     >
       {/* Left Side: Large Visual */}
@@ -547,7 +544,7 @@ export default function ProjectPortfolio({ initialFilter = "all", onNavigate }: 
   // Filter projects list
   const filteredProjects = filter === "all" 
     ? projectsList 
-    : projectsList.filter(p => p.category === filter);
+    : projectsList.filter(p => p.category && p.category.includes(filter));
 
   return (
     <section className="py-12 bg-[#0B0B0A] border-t border-white/10" id="portfolio-section">

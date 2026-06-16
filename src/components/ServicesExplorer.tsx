@@ -127,8 +127,8 @@ export default function ServicesExplorer() {
                 return (
                   <motion.div 
                     key={idx} 
-                    className="border border-white/5 bg-zinc-950/50 p-6 space-y-4"
-                    whileHover={{ y: -5, borderColor: "rgba(245, 158, 11, 0.3)" }}
+                    className="border border-white/5 hover:border-amber-500/30 bg-zinc-950/50 p-6 space-y-4 transition-colors duration-300"
+                    whileHover={{ y: -5 }}
                     transition={{ type: "spring", stiffness: 400, damping: 25 }}
                   >
                     <div className="w-10 h-10 bg-zinc-900 border border-white/10 flex items-center justify-center">
@@ -254,11 +254,9 @@ export default function ServicesExplorer() {
               <motion.div
                 key={member.id}
                 id={`team-member-${member.id}`}
-                className="bg-[#141413] border border-white/10 p-6 flex flex-col justify-between space-y-6 transition-colors duration-300 shadow-3xs"
+                className="bg-[#141413] border border-white/10 hover:border-[#AA5B3F] hover:shadow-2xl hover:shadow-black/50 p-6 flex flex-col justify-between space-y-6 transition-all duration-300 shadow-3xs"
                 whileHover={{ 
-                  y: -8, 
-                  boxShadow: "0 20px 40px -20px rgba(0,0,0,0.5)", 
-                  borderColor: "#AA5B3F" 
+                  y: -8 
                 }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
               >

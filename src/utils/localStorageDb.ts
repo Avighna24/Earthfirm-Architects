@@ -254,11 +254,11 @@ export async function fetchLocalProjects(): Promise<Project[]> {
   return data;
 }
 
-export async function saveLocalProject(project: Omit<Project, 'id'>) {
+export async function saveLocalProject(project: any) {
   const list = await fetchLocalProjects();
   const newProj: Project = {
     ...project,
-    id: `proj_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
+    id: project.id || `proj_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
   };
   list.push(newProj);
   await setStored(KEYS.PROJECTS, list);

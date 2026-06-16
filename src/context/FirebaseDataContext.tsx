@@ -42,6 +42,7 @@ export const FirebaseDataProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     const unsubProjects = onSnapshot(collection(db, 'projects'), (snap) => {
       const items = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
+      items.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
       console.log("FirebaseDataContext snapshot update for projects:", items.length);
       setData(prev => ({ ...prev, projects: items }));
       projectsLoaded = true;
