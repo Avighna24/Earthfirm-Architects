@@ -10,7 +10,6 @@ interface HeaderProps {
 
 export default function Header({ activeTab, setActiveTab }: HeaderProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [logoError, setLogoError] = useState(false);
 
   const navItems = [
     { id: "home", label: "Home" },
@@ -29,18 +28,11 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
           className="flex items-center cursor-pointer group relative z-[110]"
           id="header-logo"
         >
-          {!logoError ? (
-            <img 
-              src="/logo_website.png" 
-              onError={() => setLogoError(true)}
-              alt="Earthfirm Architects" 
-              className="h-14 w-auto object-contain transition-all duration-500 group-hover:scale-105 brightness-0 invert"
-            />
-          ) : (
-            <span className="font-sans text-[13px] uppercase tracking-[0.45em] text-white font-bold group-hover:text-amber-500 transition-colors duration-300">
-              Earthfirm
-            </span>
-          )}
+          <img 
+            src="https://earthfirmarchitects.com/static/images/logo_website.png" 
+            alt="Earthfirm Architects" 
+            className="h-14 w-auto object-contain transition-all duration-500 group-hover:scale-105 brightness-0 invert"
+          />
         </div>
 
         {/* Global Navigation */}
