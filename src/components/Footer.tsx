@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "motion/react";
 import { Instagram, Facebook, Linkedin, Youtube, Pin } from "lucide-react";
 
@@ -8,6 +8,8 @@ interface FooterProps {
 }
 
 export default function Footer({ theme = "dark", setActiveTab }: FooterProps) {
+  const [logoError, setLogoError] = useState(false);
+
   const navLinks = [
     { id: "home", label: "Home" },
     { id: "studio", label: "How we do it" },
@@ -62,13 +64,22 @@ export default function Footer({ theme = "dark", setActiveTab }: FooterProps) {
                 onClick={() => setActiveTab?.("home")}
                 className="cursor-pointer group inline-block"
               >
-                <img 
-                  src="https://earthfirmarchitects.com/static/images/logo_website.png" 
-                  alt="Earth Firm Architects Logo" 
-                  className={`h-12 w-auto object-contain transition-all duration-500 group-hover:scale-105 ${
-                    theme === "dark" ? "brightness-0 invert" : "grayscale contrast-125"
-                  }`}
-                />
+                {!logoError ? (
+                  <img 
+                    src="/logo_website.png" 
+                    onError={() => setLogoError(true)}
+                    alt="Earth Firm Architects Logo" 
+                    className={`h-12 w-auto object-contain transition-all duration-500 group-hover:scale-105 ${
+                      theme === "dark" ? "brightness-0 invert" : "grayscale contrast-125"
+                    }`}
+                  />
+                ) : (
+                  <span className={`font-sans text-[13px] uppercase tracking-[0.45em] font-bold group-hover:text-amber-500 transition-colors duration-300 ${
+                    theme === "dark" ? "text-white" : "text-zinc-900"
+                  }`}>
+                    Earthfirm
+                  </span>
+                )}
               </div>
             </div>
           </div>
