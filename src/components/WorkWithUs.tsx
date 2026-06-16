@@ -35,9 +35,26 @@ export default function WorkWithUs() {
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error" | "mock-success">("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
+  const validateFile = (file: File, typeName: "Resume" | "Portfolio"): boolean => {
+    const MAX_SIZE = 350 * 1024; // 350 KB
+    if (file.size > MAX_SIZE) {
+      setErrorMessage(`${typeName} file size exceeds 350 KB (actual: ${(file.size / 1024).toFixed(1)} KB). To comply with cloud database limits, please compress or downsize your document before uploading.`);
+      setSubmitStatus("error");
+      return false;
+    }
+    setErrorMessage("");
+    setSubmitStatus("idle");
+    return true;
+  };
+
   const handleResumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setResumeFile(e.target.files[0]);
+      const file = e.target.files[0];
+      if (validateFile(file, "Resume")) {
+        setResumeFile(file);
+      } else {
+        if (resumeInputRef.current) resumeInputRef.current.value = "";
+      }
     }
   };
 
@@ -54,13 +71,21 @@ export default function WorkWithUs() {
     e.preventDefault();
     setResumeDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setResumeFile(e.dataTransfer.files[0]);
+      const file = e.dataTransfer.files[0];
+      if (validateFile(file, "Resume")) {
+        setResumeFile(file);
+      }
     }
   };
 
   const handlePortfolioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setPortfolioFile(e.target.files[0]);
+      const file = e.target.files[0];
+      if (validateFile(file, "Portfolio")) {
+        setPortfolioFile(file);
+      } else {
+        if (portfolioInputRef.current) portfolioInputRef.current.value = "";
+      }
     }
   };
 
@@ -77,7 +102,10 @@ export default function WorkWithUs() {
     e.preventDefault();
     setPortfolioDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setPortfolioFile(e.dataTransfer.files[0]);
+      const file = e.dataTransfer.files[0];
+      if (validateFile(file, "Portfolio")) {
+        setPortfolioFile(file);
+      }
     }
   };
 
@@ -119,8 +147,22 @@ export default function WorkWithUs() {
       return;
     }
 
+    if (resumeFile.size > 350 * 1024) {
+      setErrorMessage(`Resume is too large (${(resumeFile.size / 1024).toFixed(1)} KB). Please compress it to under 350 KB before submitting.`);
+      setSubmitStatus("error");
+      setIsSubmitting(false);
+      return;
+    }
+
     if (!portfolioFile) {
       setErrorMessage("Please upload your Portfolio (mandatory) before submitting.");
+      setSubmitStatus("error");
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (portfolioFile.size > 350 * 1024) {
+      setErrorMessage(`Portfolio is too large (${(portfolioFile.size / 1024).toFixed(1)} KB). Please compress it to under 350 KB before submitting.`);
       setSubmitStatus("error");
       setIsSubmitting(false);
       return;

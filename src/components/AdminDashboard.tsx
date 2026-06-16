@@ -245,7 +245,7 @@ export default function AdminDashboard() {
         let optimizedCover = proj.fullImage;
         if (proj.fullImage && proj.fullImage.startsWith("data:")) {
           try {
-            optimizedCover = await compressBase64(proj.fullImage, 1000, 0.75);
+            optimizedCover = await compressBase64(proj.fullImage, 1200, 0.82);
           } catch (coverErr) {
             console.error("Cover compression failed for: " + proj.title, coverErr);
           }
@@ -262,7 +262,7 @@ export default function AdminDashboard() {
             );
             if (imgStr && imgStr.startsWith("data:")) {
               try {
-                optimizedGallery[gIdx] = await compressBase64(imgStr, 900, 0.70);
+                optimizedGallery[gIdx] = await compressBase64(imgStr, 1200, 0.80);
               } catch (galleryImgErr) {
                 console.error("Gallery compression failed for row: " + gIdx, galleryImgErr);
               }
@@ -769,8 +769,8 @@ export default function AdminDashboard() {
       setActionSuccess(`Optimizing and preparing ${totalFiles} gallery images...`);
 
       const options = {
-        maxSizeMB: 0.15, // 150KB matches superb web-optimized quality with minuscule IndexedDB/local storage weight
-        maxWidthOrHeight: 900, // perfect details for carousel slider without visual quality loss
+        maxSizeMB: 0.45, // 450KB matches pristine and superb web-optimized quality
+        maxWidthOrHeight: 1200, // crisp high-definition details for modern displays
         useWebWorker: true,
       };
 
@@ -907,17 +907,18 @@ export default function AdminDashboard() {
         if (item.file) {
           try {
             const base64 = await fileToBase64(item.file);
-            const optimized = await compressBase64(base64, 900, 0.7);
-            processedGallery.push({ name: item.name, data: optimized });
+            // Newly uploaded files have already been compressed beautifully using browser-image-compression.
+            // Do NOT double-compress to prevent multi-pass JPEG quality degradation and artifacts!
+            processedGallery.push({ name: item.name, data: base64 });
           } catch (err) {
-            console.error("Failed to compress file: " + item.name, err);
+            console.error("Failed to read compressed file: " + item.name, err);
             processedGallery.push({ name: item.name, data: item.previewUrl });
           }
         } else {
-          // If it is an existing picture but is currently uncompressed/huge base64, optimize it on the fly!
-          if (item.data && item.data.startsWith("data:") && item.data.length > 120000) {
+          // Only optimize existing images if they are excessively large base64 strings (exceeding 300KB)
+          if (item.data && item.data.startsWith("data:") && item.data.length > 300000) {
             try {
-              const optimized = await compressBase64(item.data, 900, 0.7);
+              const optimized = await compressBase64(item.data, 1200, 0.80);
               processedGallery.push({ name: item.name, data: optimized });
             } catch (_) {
               processedGallery.push({ name: item.name, data: item.data });
@@ -928,11 +929,12 @@ export default function AdminDashboard() {
         }
       }
 
-      // Automatically optimize covers if they are legacy unoptimized sizes
+      // Automatically optimize covers if they are legacy unoptimized sizes (exceeding 350KB base64 strings)
+      // New uploads are already compressed beautifully by handleCoverPhotoUpload to <0.8MB file width 1200.
       let finalCoverImg = newProjCoverImg;
-      if (newProjCoverImg && newProjCoverImg.startsWith("data:") && newProjCoverImg.length > 150000) {
+      if (newProjCoverImg && newProjCoverImg.startsWith("data:") && newProjCoverImg.length > 350000) {
         try {
-          finalCoverImg = await compressBase64(newProjCoverImg, 1000, 0.75);
+          finalCoverImg = await compressBase64(newProjCoverImg, 1200, 0.80);
         } catch (_) {}
       }
 
