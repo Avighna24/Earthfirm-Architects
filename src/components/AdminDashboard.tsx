@@ -182,6 +182,8 @@ export default function AdminDashboard() {
   // Add Item states
   const [isAddingTestimonial, setIsAddingTestimonial] = useState(false);
   const [isAddingClient, setIsAddingClient] = useState(false);
+  const [isEditingClient, setIsEditingClient] = useState(false);
+  const [editingClient, setEditingClient] = useState<any>(null);
   const [isAddingVideoTestimonial, setIsAddingVideoTestimonial] = useState(false);
   const [isAddingTeamMember, setIsAddingTeamMember] = useState(false);
   const [isEditingTeamMember, setIsEditingTeamMember] = useState(false);
@@ -435,18 +437,29 @@ export default function AdminDashboard() {
   const renderPartners = () => (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-light uppercase tracking-widest text-white">Manage Partners</h3>
-        <button onClick={() => setIsAddingClient(!isAddingClient)} className="text-[10px] font-mono uppercase bg-amber-500 text-black px-4 py-2 hover:bg-white transition-all">
-          {isAddingClient ? "Cancel" : "Add Partner"}
+        <h3 className="text-xl font-light uppercase tracking-widest text-white">
+          {isEditingClient ? "Edit Partner Association" : "Manage Partners"}
+        </h3>
+        <button 
+          onClick={() => {
+            if (isEditingClient) {
+              setIsEditingClient(false);
+              setEditingClient(null);
+            } else {
+              setIsAddingClient(!isAddingClient);
+            }
+          }} 
+          className="text-[10px] font-mono uppercase bg-amber-500 text-black px-4 py-2 hover:bg-white transition-all"
+        >
+          {isEditingClient ? "Cancel Edit" : (isAddingClient ? "Cancel" : "Add Partner")}
         </button>
       </div>
 
-      {isAddingClient && (
+      {(isAddingClient || isEditingClient) && (
         <form className="bg-zinc-950 p-4 border border-white/5 space-y-4" onSubmit={async (e) => {
           e.preventDefault();
           const target = e.target as typeof e.target & { 
             name: { value: string }, 
-            url: { value: string },
             logoFile: { files: FileList }
           };
 
@@ -455,31 +468,117 @@ export default function AdminDashboard() {
             logoBase64 = await fileToBase64(target.logoFile.files[0]);
           }
 
-          const { saveLocalClient } = await import("../utils/firestoreDb");
-          saveLocalClient({ 
-            name: target.name.value, 
-            logo: logoBase64, 
-            url: target.url.value 
-          });
+          const { saveLocalClient, updateLocalClient } = await import("../utils/firestoreDb");
+          
+          if (isEditingClient) {
+            await updateLocalClient({
+              ...editingClient,
+              name: target.name.value,
+              logo: logoBase64 || editingClient.logo || editingClient.logoUrl || "",
+              logoUrl: logoBase64 || editingClient.logoUrl || editingClient.logo || "",
+              url: editingClient.url || ""
+            });
+            setActionSuccess("Partner updated successfully.");
+            setIsEditingClient(false);
+            setEditingClient(null);
+          } else {
+            await saveLocalClient({ 
+              name: target.name.value, 
+              logo: logoBase64,
+              logoUrl: logoBase64,
+              url: "" 
+            });
+            setActionSuccess("Partner added successfully.");
+            setIsAddingClient(false);
+          }
+          
           loadClients();
-          setIsAddingClient(false);
+          setTimeout(() => setActionSuccess(""), 3000);
         }}>
-          <input name="name" placeholder="Name" className="w-full bg-zinc-900 p-2 text-white border border-white/5" required />
-          <input name="url" placeholder="URL" className="w-full bg-zinc-900 p-2 text-white border border-white/5" required />
-          <div className="space-y-1">
-            <label className="text-[10px] font-mono uppercase text-zinc-500">Logo Image</label>
-            <input type="file" name="logoFile" accept="image/*" className="w-full bg-zinc-900 p-2 text-white border border-white/5 text-xs" />
+          <div>
+            <label className="text-[10px] font-mono uppercase text-zinc-500 block mb-1">Partner Name</label>
+            <input 
+              name="name" 
+              placeholder="Name (e.g. Kalindi Group)" 
+              defaultValue={editingClient?.name || ""}
+              className="w-full bg-zinc-900 p-2 text-white border border-white/5" 
+              required 
+            />
           </div>
-          <button type="submit" className="w-full bg-amber-500 text-black py-2 font-bold uppercase tracking-widest text-[10px]">Save</button>
+
+          {isEditingClient && (editingClient?.logoUrl || editingClient?.logo) && (
+            <div className="space-y-1">
+              <label className="text-[10px] font-mono uppercase text-zinc-500 block">Current Logo Preview</label>
+              <div className="inline-block bg-white/5 border border-white/10 p-2">
+                <img 
+                  src={editingClient.logoUrl || editingClient.logo} 
+                  className="h-12 max-w-[180px] object-contain brightness-100 contrast-125" 
+                  alt="Current Partner Logo" 
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-1">
+            <label className="text-[10px] font-mono uppercase text-zinc-500 block">
+              Logo Image {isEditingClient ? "(Leave empty to keep existing logo)" : "(Required)"}
+            </label>
+            <input 
+              type="file" 
+              name="logoFile" 
+              accept="image/*" 
+              className="w-full bg-zinc-900 p-2 text-white border border-white/5 text-xs" 
+              required={!isEditingClient} 
+            />
+          </div>
+
+          <button type="submit" className="w-full bg-amber-500 text-black py-2.5 font-bold uppercase tracking-widest text-[10px] hover:bg-amber-400 transition-all">
+            {isEditingClient ? "Save Modifications" : "Publish Partner Logo"}
+          </button>
         </form>
       )}
 
-      {clients.map((c) => (
-        <div key={c.id} className="border border-white/5 p-4 flex justify-between items-center text-zinc-300">
-           <span>{c.name}</span>
-           <button onClick={() => handleDeleteClick("partner", c.id, c.name)} className="text-red-500 hover:text-red-300">Delete</button>
-        </div>
-      ))}
+      <div className="space-y-3">
+        {clients.map((c) => (
+          <div key={c.id} className="border border-white/5 bg-zinc-950 p-4 flex justify-between items-center text-zinc-300">
+             <div className="flex items-center gap-4">
+               {(c.logoUrl || c.logo) ? (
+                 <div className="bg-white/5 border border-white/10 p-1.5 flex items-center justify-center w-16 h-10">
+                   <img 
+                     src={c.logoUrl || c.logo} 
+                     className="max-h-full max-w-full object-contain brightness-100" 
+                     alt={c.name} 
+                   />
+                 </div>
+               ) : (
+                 <div className="w-16 h-10 bg-zinc-900 border border-white/5 flex items-center justify-center text-[9px] font-mono uppercase text-zinc-500 text-center leading-tight">
+                   No Logo
+                 </div>
+               )}
+               <span className="font-medium tracking-wide">{c.name}</span>
+             </div>
+             
+             <div className="flex items-center gap-4">
+               <button 
+                 onClick={() => {
+                   setEditingClient(c);
+                   setIsEditingClient(true);
+                   setIsAddingClient(false);
+                 }} 
+                 className="text-[10px] font-mono uppercase text-amber-500 hover:text-amber-400 font-bold transition-all"
+               >
+                 Edit
+               </button>
+               <button 
+                 onClick={() => handleDeleteClick("partner", c.id, c.name)} 
+                 className="text-[10px] font-mono uppercase text-red-500 hover:text-red-400 font-bold transition-all"
+               >
+                 Delete
+               </button>
+             </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 

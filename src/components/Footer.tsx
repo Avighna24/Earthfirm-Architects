@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "motion/react";
 import { Instagram, Facebook, Linkedin, Youtube, Pin } from "lucide-react";
+import Logo from "./Logo";
 
 interface FooterProps {
   theme?: "light" | "dark";
@@ -59,18 +60,15 @@ export default function Footer({ theme = "dark", setActiveTab }: FooterProps) {
               </p>
               
               {/* Logo in Footer */}
-              <div 
-                onClick={() => setActiveTab?.("home")}
-                className="cursor-pointer group inline-block"
-              >
-                <img 
-                  src="/logo_website.png" 
-                  alt="Earth Firm Architects Logo" 
-                  className={`h-12 w-auto object-contain transition-all duration-500 group-hover:scale-105 ${
-                    theme === "dark" ? "brightness-0 invert" : "grayscale contrast-125"
-                  }`}
-                />
-              </div>
+              <Logo 
+                onClick={(e) => {
+                  e.preventDefault();
+                  setActiveTab?.("home");
+                }}
+                className="flex-shrink-0 relative top-0 left-0 lg:top-[30px] lg:left-[15px]" 
+                theme={theme}
+                isHeader={true}
+              />
             </div>
           </div>
 

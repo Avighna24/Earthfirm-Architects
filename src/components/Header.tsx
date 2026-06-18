@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Compass, Sparkles, BookOpen, Mail, Home, Menu, X, Briefcase } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import Logo from "./Logo";
 
 interface HeaderProps {
   activeTab: string;
@@ -21,19 +22,18 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
 
   return (
     <header className="fixed top-0 left-0 w-full z-[100] backdrop-blur-md border-b transition-all duration-500 bg-black/40 border-white/5">
-      <div className="max-w-[1500px] mx-auto px-6 lg:px-10 h-20 flex items-center justify-between">
+      <div className="max-w-[1500px] mx-auto px-6 lg:px-10 h-16 sm:h-18 md:h-20 flex items-center justify-between">
         {/* Logo and Brand Title */}
-        <div 
-          onClick={() => setActiveTab("home")} 
-          className="flex items-center cursor-pointer group relative z-[110]"
+        <Logo 
+          onClick={(e) => {
+            e.preventDefault();
+            setActiveTab("home");
+          }}
+          className="relative z-[110] flex-shrink-0 h-full flex items-center justify-center top-0 left-0 lg:top-[45px] lg:left-[15px] transition-all duration-300"
+          theme="dark"
+          isHeader={true}
           id="header-logo"
-        >
-          <img 
-            src="/logo_website.png" 
-            alt="Earthfirm Architects" 
-            className="h-14 w-auto object-contain transition-all duration-500 group-hover:scale-105 brightness-0 invert"
-          />
-        </div>
+        />
 
         {/* Global Navigation */}
         <nav className="hidden lg:flex items-center gap-5 xl:gap-8" id="header-nav">
@@ -43,7 +43,7 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`py-2 text-[10px] uppercase tracking-[0.2em] transition-all duration-300 relative font-bold font-sans ${
+                className={`py-2 text-xs lg:text-[11px] xl:text-[12px] uppercase tracking-[0.22em] transition-all duration-300 relative font-bold font-sans ${
                   isActive 
                     ? "text-amber-500" 
                     : "text-zinc-300 hover:text-white"

@@ -98,8 +98,22 @@ export async function fetchLocalClients(): Promise<Client[]> {
 export async function saveLocalClient(client: Omit<Client, 'id'>) {
   const newRef = doc(collections.clients);
   const data = { ...client, id: newRef.id };
+  if (data.logo && !data.logoUrl) {
+    data.logoUrl = data.logo;
+  }
   await setDoc(newRef, data);
   return data;
+}
+
+export async function updateLocalClient(client: Client) {
+  const docRef = doc(collections.clients, client.id);
+  const data = { ...client };
+  if (data.logo && !data.logoUrl) {
+    data.logoUrl = data.logo;
+  } else if (!data.logo && data.logoUrl) {
+    data.logo = data.logoUrl;
+  }
+  await updateDoc(docRef, data);
 }
 
 export async function deleteLocalClient(id: string) {

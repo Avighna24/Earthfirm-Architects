@@ -4,6 +4,7 @@ import {
   SERVICES, PROJECTS, HERO_IMAGE, ARCHITECTURE_IMAGE, INTERIOR_IMAGE, LANDSCAPE_IMAGE, CLIENTS 
 } from "../data";
 import { Client } from "../types";
+import { useFirebaseData } from "../context/FirebaseDataContext";
 import { 
   Compass, Hammer, Trees, Users, ChevronRight, Building2
 } from "lucide-react";
@@ -35,7 +36,20 @@ export default function ServicesExplorer() {
     return () => window.removeEventListener("earthfirm_data_updated", handleUpdate);
   }, []);
   // Navigation tabs for clients
-  const [activeClient, setActiveClient] = useState<Client>(CLIENTS[0]);
+  const { clients: firebaseClients } = useFirebaseData();
+  const displayClients = useMemo(() => {
+    return firebaseClients && firebaseClients.length > 0 ? firebaseClients : CLIENTS;
+  }, [firebaseClients]);
+
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+
+  const activeClient = useMemo(() => {
+    if (selectedClientId) {
+      const found = displayClients.find((c) => c.id === selectedClientId);
+      if (found) return found;
+    }
+    return displayClients[0];
+  }, [selectedClientId, displayClients]);
 
   // Core Pillars of Earth Firm Architecture & Design
   const PILLARS = [
@@ -313,12 +327,12 @@ export default function ServicesExplorer() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start text-left" id="clients-interactive-sandbox">
             {/* Left Column: Client list selector (5 columns) */}
             <div className="lg:col-span-5 space-y-2.5" id="clients-list-container">
-              {CLIENTS.map((client) => {
+              {displayClients.map((client) => {
                 const isSelected = activeClient?.id === client.id;
                 return (
                   <button
                     key={client.id}
-                    onClick={() => setActiveClient(client)}
+                    onClick={() => setSelectedClientId(client.id)}
                     className={`w-full text-left p-4 md:p-5 border transition-all duration-300 flex items-center justify-between cursor-pointer rounded-none ${
                       isSelected
                         ? "bg-[#E5E3DF] text-[#0B0B0A] border-[#E5E3DF]"
@@ -438,10 +452,10 @@ export default function ServicesExplorer() {
                 animate={{ x: ["0%", "-50%"] }}
                 transition={{ repeat: Infinity, duration: 40, ease: "linear" }}
               >
-                {[...CLIENTS, ...CLIENTS].map((client, idx) => (
+                {[...displayClients, ...displayClients].map((client, idx) => (
                   <div 
                     key={`marquee-${client.id}-${idx}`}
-                    onClick={() => setActiveClient(client)}
+                    onClick={() => setSelectedClientId(client.id)}
                     className="h-16 w-32 flex items-center justify-center transition-all cursor-pointer"
                   >
                     {client.logoUrl ? (

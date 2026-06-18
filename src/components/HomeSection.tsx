@@ -9,6 +9,7 @@ import {
 } from "../utils/localStorageDb";
 import { subscribeToProjects } from "../utils/firestoreDb";
 import { Project, VideoTestimonial } from "../types";
+import { useFirebaseData } from "../context/FirebaseDataContext";
 import LazyImage from "./LazyImage";
 import Landscape3D from "./Landscape3D";
 
@@ -275,6 +276,11 @@ const VideoTestimonialCard: React.FC<{ testimonial: VideoTestimonial }> = ({ tes
 };
 
 export default function HomeSection({ onNavigate, onExploreProject }: HomeSectionProps) {
+  const { clients: firebaseClients } = useFirebaseData();
+  const displayClients = useMemo(() => {
+    return firebaseClients && firebaseClients.length > 0 ? firebaseClients : CLIENTS;
+  }, [firebaseClients]);
+
   const [activeTestimonial, setActiveTestimonial] = useState(0);
   const [direction, setDirection] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
@@ -640,7 +646,7 @@ export default function HomeSection({ onNavigate, onExploreProject }: HomeSectio
                 animate={{ x: ["0%", "-50%"] }}
                 transition={{ repeat: Infinity, duration: 40, ease: "linear" }}
               >
-                {[...CLIENTS, ...CLIENTS].map((client, idx) => (
+                {[...displayClients, ...displayClients].map((client, idx) => (
                   <div 
                     key={`home-marquee-${client.id}-${idx}`}
                     onClick={() => onNavigate("how-we-do-it")}
