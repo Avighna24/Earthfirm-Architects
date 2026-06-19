@@ -29,7 +29,7 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
             e.preventDefault();
             setActiveTab("home");
           }}
-          className="relative z-[110] flex-shrink-0 h-full flex items-center justify-center top-0 left-0 lg:top-[45px] lg:left-[15px] transition-all duration-300"
+          className="relative z-[110] flex-shrink-0 h-full flex items-center justify-center transition-all duration-300"
           theme="dark"
           isHeader={true}
           id="header-logo"

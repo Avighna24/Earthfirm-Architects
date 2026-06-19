@@ -640,29 +640,31 @@ export default function HomeSection({ onNavigate, onExploreProject }: HomeSectio
               <span className="font-sans text-[11px] font-extrabold uppercase tracking-widest text-[#E5E3DF]">Pioneering Investors</span>
             </div>
             
-            <div className="relative w-full overflow-hidden">
+            <div className="relative w-full overflow-hidden select-none pointer-events-none">
               <motion.div 
-                className="flex items-center gap-16 md:gap-32 w-max"
+                className="flex flex-nowrap items-center gap-16 md:gap-32 w-max pointer-events-none"
                 animate={{ x: ["0%", "-50%"] }}
-                transition={{ repeat: Infinity, duration: 40, ease: "linear" }}
+                transition={{ repeat: Infinity, duration: 30, ease: "linear" }}
               >
-                {[...displayClients, ...displayClients].map((client, idx) => (
-                  <div 
-                    key={`home-marquee-${client.id}-${idx}`}
-                    onClick={() => onNavigate("how-we-do-it")}
-                    className="h-16 w-32 flex items-center justify-center transition-all cursor-pointer shrink-0"
-                  >
-                    {client.logoUrl ? (
-                      <LazyImage 
-                        src={client.logoUrl} 
-                        alt={client.name} 
-                        className="max-h-full max-w-full object-contain"
-                      />
-                    ) : (
-                      <span className="font-mono text-sm font-bold tracking-wider text-zinc-100">{client.fallbackAcronym}</span>
-                    )}
-                  </div>
-                ))}
+                {(() => {
+                  const marqueeGroup = [...displayClients, ...displayClients, ...displayClients, ...displayClients];
+                  return [...marqueeGroup, ...marqueeGroup].map((client, idx) => (
+                    <div 
+                      key={`home-marquee-${client.id}-${idx}`}
+                      className="h-16 w-32 flex items-center justify-center transition-all shrink-0 select-none pointer-events-none"
+                    >
+                      {client.logoUrl ? (
+                        <LazyImage 
+                          src={client.logoUrl} 
+                          alt={client.name} 
+                          className="max-h-full max-w-full object-contain pointer-events-none select-none"
+                        />
+                      ) : (
+                        <span className="font-mono text-sm font-bold tracking-wider text-zinc-100 select-none pointer-events-none">{client.fallbackAcronym}</span>
+                      )}
+                    </div>
+                  ));
+                })()}
               </motion.div>
             </div>
           </div>

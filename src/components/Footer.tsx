@@ -65,7 +65,7 @@ export default function Footer({ theme = "dark", setActiveTab }: FooterProps) {
                   e.preventDefault();
                   setActiveTab?.("home");
                 }}
-                className="flex-shrink-0 relative top-0 left-0 lg:top-[30px] lg:left-[15px]" 
+                className="flex-shrink-0" 
                 theme={theme}
                 isHeader={true}
               />
